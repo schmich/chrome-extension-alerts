@@ -4,7 +4,7 @@ require 'excon'
 require 'childprocess'
 require 'addressable/template'
 
-def fetch_extension_comments(extension_id)
+def fetch_extension_thread(extension_id, group)
   template = Addressable::Template.new('http://chrome.google.com/extensions/permalink{?id}')
 
   request = {
@@ -14,12 +14,12 @@ def fetch_extension_comments(extension_id)
     specs: [
       {
         type: 'CommentThread',
-        url: template.expand({ id: extension_id }),
-        groups: 'chrome_webstore',
+        url: template.expand({ id: extension_id }).to_s,
+        groups: group,
         sortby: 'date',
         startindex: '0',
         numresults: '25',
-        id: '234'
+        id: '0'
       }
     ],
     internedKeys: [],

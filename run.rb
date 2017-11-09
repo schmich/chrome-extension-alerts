@@ -1,28 +1,61 @@
 require 'extension'
 require 'date'
-require 'pp'
 
-=begin
-comments = fetch_extension_comments('')
-File.open('example.json', 'w') do |f|
-  f.write(JSON.pretty_generate(comments))
+class Review < Struct.new(:author, :comment, :rating, :created_at)
 end
-=end
 
-class Comment < Struct.new(:author, :comment, :rating, :created_at)
+class Issue < Struct.new(:author, :title, :comment, :type, :created_at)
 end
 
 class Author < Struct.new(:name, :url, :image)
-end
-
-def create_comments(response_obj)
-  response_obj.values.first['results']['annotations'].map do |annotation|
+  def self.from_annotation(annotation)
     entity = annotation['entity']
-    author = Author.new(entity['displayName'], entity['profileUrl'], entity['authorPhotoUrl'])
-    created_at = DateTime.strptime(annotation['creationTimestamp'].to_s, '%s')
-    Comment.new(author, annotation['comment'], annotation['starRating'], created_at)
+    Author.new(entity['displayName'], entity['profileUrl'], entity['authorPhotoUrl'])
   end
 end
 
-response = JSON.parse(File.read('example.json'))
-comments = create_comments(response)
+def parse_reviews(response_obj)
+  response_obj.values.first['results']['annotations'].map do |annotation|
+    created_at = DateTime.strptime(annotation['creationTimestamp'].to_s, '%s')
+    Review.new(
+      Author.from_annotation(annotation),
+      annotation['comment'],
+      annotation['starRating'],
+      created_at
+    )
+  end
+end
+
+def parse_issues(response_obj)
+  response_obj.values.first['results']['annotations'].map do |annotation|
+    created_at = DateTime.strptime(annotation['timestamp'].to_s, '%s')
+    Issue.new(
+      Author.from_annotation(annotation),
+      annotation['title'],
+      annotation['comment'],
+      annotation['attributes']['sfrAttributes']['issueType'],
+      created_at
+    )
+  end
+end
+
+def fetch_reviews(extension_id)
+  response = fetch_extension_thread(extension_id, 'chrome_webstore')
+  parse_reviews(response)
+end
+
+def fetch_issues(extension_id)
+  response = fetch_extension_thread(extension_id, 'chrome_webstore_support')
+  parse_issues(response)
+end
+
+def load_config
+  JSON.parse(File.read('config.json'))
+end
+
+config = load_config()
+
+config['extensions'].each do |id|
+  p fetch_reviews(id)
+  p fetch_issues(id)
+end
