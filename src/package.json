@@ -30,6 +30,7 @@
     "nodemailer": "^4.4.0",
     "vue": "^2.5.3",
     "vue-server-renderer": "^2.5.3",
-    "winston": "^3.0.0-rc1"
+    "winston": "^3.0.0-rc1",
+    "yargs": "^10.0.3"
   }
 }

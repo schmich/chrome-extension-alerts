@@ -1,6 +1,7 @@
 const vm = require('vm');
 const fs = require('fs');
 const axios = require('axios');
+const yargs = require('yargs');
 const querystring = require('querystring');
 const nodemailer = require('nodemailer');
 const winston = require('winston');
@@ -131,21 +132,21 @@ function writeFile(file, data) {
   });
 }
 
-async function loadConfig() {
-  return JSON.parse(await readFile('config.json'));
-}
-
-async function loadFrontier() {
+async function loadJson(file, fallback = null) {
   try {
-    return JSON.parse(await readFile('frontier.json'));
+    return JSON.parse(await readFile(file));
   } catch (e) {
-    return {};
+    if (fallback) {
+      return fallback;
+    } else {
+      throw e;
+    }
   }
 }
 
-async function saveFrontier(frontier) {
-  let data = JSON.stringify(frontier, null, '  ');
-  await writeFile('frontier.json', data);
+async function saveJson(obj, file) {
+  let data = JSON.stringify(obj, null, '  ');
+  await writeFile(file, data);
 }
 
 async function fetchNewPosts(extensionId, frontier) {
@@ -215,10 +216,7 @@ async function sendIssueEmail(issue, config) {
   await sendEmail(config, config.issues, issue);
 }
 
-async function scan() {
-  Logger.info('Load config and frontier.');
-  let [config, frontier] = await all(loadConfig(), loadFrontier());
-
+async function scan(config, frontier) {
   let newPosts = await fetchAllNewPosts(config, frontier);
   let newFrontier = {};
 
@@ -237,14 +235,33 @@ async function scan() {
     }
   }
 
+  return newFrontier;
+}
+
+async function run(args) {
+  if (!args.config) {
+    Logger.error('Config file not specified via --config <file>.');
+    return;
+  }
+
+  if (!args.frontier) {
+    Logger.error('Frontier file not specified via --frontier <file>.');
+    return;
+  }
+
+  Logger.info('Load config and frontier.');
+  let [config, frontier] = await all(loadJson(args.config), loadJson(args.frontier, {}));
+
+  Logger.info('Scan.');
+  frontier = await scan(config, frontier);
+
   Logger.info('Save frontier.');
-  saveFrontier(newFrontier);
+  await saveJson(frontier, args.frontier);
 }
 
 (async () => {
   try {
-    Logger.info('Scan.');
-    await scan();
+    await run(yargs.argv);
   } catch (e) {
     Logger.error(e);
     throw e;
