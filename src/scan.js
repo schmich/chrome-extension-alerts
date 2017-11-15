@@ -228,11 +228,18 @@ async function scan(config, frontiers, frontierFile) {
 
   for (let id in newPosts) {
     let posts = newPosts[id];
-    frontiers[id] = frontiers[id] || { reviews: 0, issues: 0 };
+
+    const hasFrontier = !!frontiers[id];
+    if (!hasFrontier) {
+      Logger.info(`Skipping emails: first scan for ${id}.`);
+      frontiers[id] = { reviews: 0, issues: 0 };
+    }
 
     Logger.info(`Found ${posts.reviews.length} new reviews.`);
     for (let review of posts.reviews) {
-      await sendReviewEmail(transport, { ...review, extensionId: id }, config.email);
+      if (hasFrontier) {
+        await sendReviewEmail(transport, { ...review, extensionId: id }, config.email);
+      }
 
       frontiers[id].reviews = review.createdAt;
       await saveJson(frontiers, frontierFile);
@@ -240,7 +247,9 @@ async function scan(config, frontiers, frontierFile) {
 
     Logger.info(`Found ${posts.issues.length} new issues.`);
     for (let issue of posts.issues) {
-      await sendIssueEmail(transport, { ...issue, extensionId: id }, config.email);
+      if (hasFrontier) {
+        await sendIssueEmail(transport, { ...issue, extensionId: id }, config.email);
+      }
 
       frontiers[id].issues = issue.createdAt;
       await saveJson(frontiers, frontierFile);
