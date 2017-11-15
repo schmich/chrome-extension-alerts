@@ -1,14 +1,18 @@
 {
   "extensions": ["chrome-extension-id"],
   "email": {
-    "from": "Chrome Extension Alerts <username@example.com>",
-    "to": "you@example.com",
     "host": "smtp.example.com",
     "port": 465,
     "secure": true,
     "auth": {
       "user": "username",
       "pass": "p4ssw0rd"
+    },
+  },
+  "templates": {
+    "default": {
+      "from": "Chrome Extension Alerts <you@example.com>",
+      "to": "you@gmail.com"
     },
     "reviews": {
       "subject": "Review: {{ '⭐ '.repeat(rating) }} – {{ author.name }}",

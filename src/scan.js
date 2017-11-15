@@ -187,7 +187,7 @@ async function fetchAllNewPosts(config, frontiers) {
   return all;
 }
 
-async function template(template, data) {
+async function render(template, data) {
   const app = new Vue({
     template: `<div>${template}</div>`,
     data: data
@@ -197,29 +197,31 @@ async function template(template, data) {
   return rendered.replace(/<div.*?>(.*)<\/div>/, '$1');
 }
 
-async function sendEmail(transport, config, templates, data) {
+async function sendEmail(transport, template, data) {
   // Avoid sending emails too quickly.
   await sleep(0.5 * 1000);
   await new Promise(async (resolve, reject) => {
     transport.sendMail({
-      from: config.from,
-      to: config.to,
-      subject: await template(templates.subject, data),
-      html: await template(templates.body, data)
+      from: template.from,
+      to: template.to,
+      subject: await render(template.subject, data),
+      html: await render(template.body, data)
     }, (err, info) => {
       err ? reject(err) : resolve(info);
     });
   });
 }
 
-async function sendReviewEmail(transport, review, config) {
+async function sendReviewEmail(transport, review, templates) {
   Logger.info('Send review email.');
-  await sendEmail(transport, config, config.reviews, review);
+  let template = { ...(templates.default || {}), ...(templates.reviews || {}) };
+  await sendEmail(transport, template, review);
 }
 
-async function sendIssueEmail(transport, issue, config) {
+async function sendIssueEmail(transport, issue, templates) {
   Logger.info('Send issue email.');
-  await sendEmail(transport, config, config.issues, issue);
+  let template = { ...(templates.default || {}), ...(templates.issues || {}) };
+  await sendEmail(transport, template, issue);
 }
 
 async function scan(config, frontiers, frontierFile) {
@@ -238,7 +240,7 @@ async function scan(config, frontiers, frontierFile) {
     Logger.info(`Found ${posts.reviews.length} new reviews.`);
     for (let review of posts.reviews) {
       if (hasFrontier) {
-        await sendReviewEmail(transport, { ...review, extensionId: id }, config.email);
+        await sendReviewEmail(transport, { ...review, extensionId: id }, config.templates);
       }
 
       frontiers[id].reviews = review.createdAt;
@@ -248,7 +250,7 @@ async function scan(config, frontiers, frontierFile) {
     Logger.info(`Found ${posts.issues.length} new issues.`);
     for (let issue of posts.issues) {
       if (hasFrontier) {
-        await sendIssueEmail(transport, { ...issue, extensionId: id }, config.email);
+        await sendIssueEmail(transport, { ...issue, extensionId: id }, config.templates);
       }
 
       frontiers[id].issues = issue.createdAt;
