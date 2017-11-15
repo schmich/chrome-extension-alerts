@@ -155,25 +155,26 @@ async function fetchNewPosts(extensionId, frontier) {
   let reviewsFrontier = frontier.reviews || 0;
   let issuesFrontier = frontier.issues || 0;
 
-  let newReviews = reviews.filter(r => r.createdAt > reviewsFrontier);
-  let newIssues = issues.filter(i => i.createdAt > issuesFrontier);
+  let newReviews = reviews
+    .filter(r => r.createdAt > reviewsFrontier)
+    .sort((p, q) => p.createdAt - q.createdAt);
+
+  let newIssues = issues
+    .filter(i => i.createdAt > issuesFrontier)
+    .sort((p, q) => p.createdAt - q.createdAt);
 
   return {
     reviews: newReviews,
-    issues: newIssues,
-    frontier: {
-      reviews: Math.max(reviewsFrontier, ...newReviews.map(r => r.createdAt)),
-      issues: Math.max(issuesFrontier, ...newIssues.map(i => i.createdAt))
-    }
+    issues: newIssues
   };
 }
 
-async function fetchAllNewPosts(config, allFrontiers) {
+async function fetchAllNewPosts(config, frontiers) {
   let all = {};
 
   for (let id of config.extensions) {
-    let extensionFrontier = allFrontiers[id] || {};
-    all[id] = await fetchNewPosts(id, extensionFrontier);
+    let frontier = frontiers[id] || {};
+    all[id] = await fetchNewPosts(id, frontier);
   }
 
   return all;
@@ -189,13 +190,11 @@ async function template(template, data) {
   return rendered.replace(/<div.*?>(.*)<\/div>/, '$1');
 }
 
-async function sendEmail(config, templates, data) {
+async function sendEmail(transport, config, templates, data) {
   // Avoid sending emails too quickly.
-  await sleep(1 * 1000);
-
-  let transporter = nodemailer.createTransport(config);
+  await sleep(0.5 * 1000);
   await new Promise(async (resolve, reject) => {
-    transporter.sendMail({
+    transport.sendMail({
       from: config.from,
       to: config.to,
       subject: await template(templates.subject, data),
@@ -206,36 +205,40 @@ async function sendEmail(config, templates, data) {
   });
 }
 
-async function sendReviewEmail(review, config) {
+async function sendReviewEmail(transport, review, config) {
   Logger.info('Send review email.');
-  await sendEmail(config, config.reviews, review);
+  await sendEmail(transport, config, config.reviews, review);
 }
 
-async function sendIssueEmail(issue, config) {
+async function sendIssueEmail(transport, issue, config) {
   Logger.info('Send issue email.');
-  await sendEmail(config, config.issues, issue);
+  await sendEmail(transport, config, config.issues, issue);
 }
 
-async function scan(config, frontier) {
-  let newPosts = await fetchAllNewPosts(config, frontier);
-  let newFrontier = {};
+async function scan(config, frontiers, frontierFile) {
+  let newPosts = await fetchAllNewPosts(config, frontiers);
+  let transport = nodemailer.createTransport(config.email);
 
   for (let id in newPosts) {
     let posts = newPosts[id];
-    newFrontier[id] = posts.frontier;
+    frontiers[id] = frontiers[id] || { reviews: 0, issues: 0 };
 
     Logger.info(`Found ${posts.reviews.length} new reviews.`);
     for (let review of posts.reviews) {
-      await sendReviewEmail({ ...review, extensionId: id }, config.email);
+      await sendReviewEmail(transport, { ...review, extensionId: id }, config.email);
+
+      frontiers[id].reviews = review.createdAt;
+      await saveJson(frontiers, frontierFile);
     }
 
     Logger.info(`Found ${posts.issues.length} new issues.`);
     for (let issue of posts.issues) {
-      await sendIssueEmail({ ...issue, extensionId: id }, config.email);
+      await sendIssueEmail(transport, { ...issue, extensionId: id }, config.email);
+
+      frontiers[id].issues = issue.createdAt;
+      await saveJson(frontiers, frontierFile);
     }
   }
-
-  return newFrontier;
 }
 
 async function run(args) {
@@ -250,13 +253,10 @@ async function run(args) {
   }
 
   Logger.info('Load config and frontier.');
-  let [config, frontier] = await all(loadJson(args.config), loadJson(args.frontier, {}));
+  let [config, frontiers] = await all(loadJson(args.config), loadJson(args.frontier, {}));
 
   Logger.info('Scan.');
-  frontier = await scan(config, frontier);
-
-  Logger.info('Save frontier.');
-  await saveJson(frontier, args.frontier);
+  await scan(config, frontiers, args.frontier);
 }
 
 (async () => {
