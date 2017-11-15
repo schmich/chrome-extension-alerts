@@ -2,7 +2,7 @@
   "name": "chrome-extension-alerts",
   "version": "0.0.1",
   "description": "Get email notifications for user feedback on your Chrome extension",
-  "main": "extension.js",
+  "main": "scan.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
