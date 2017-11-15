@@ -10,6 +10,12 @@ async function all(...promises) {
   return await Promise.all(promises);
 }
 
+async function sleep(milliseconds) {
+  return await new Promise((resolve, reject) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
 async function jsonpExtensionThread(extensionId, group) {
   const req = {
     appId: 94,
@@ -168,6 +174,9 @@ async function template(template, data) {
 }
 
 async function sendEmail(config, templates, data) {
+  // Avoid sending emails too quickly.
+  await sleep(1 * 1000);
+
   let transporter = nodemailer.createTransport(config);
   await new Promise(async (resolve, reject) => {
     transporter.sendMail({
@@ -200,13 +209,11 @@ async function run() {
     newFrontier[id] = posts.frontier;
 
     for (let review of posts.reviews) {
-      review.extensionId = id;
-      await sendReviewEmail(review, config.email);
+      await sendReviewEmail({ ...review, extensionId: id }, config.email);
     }
 
     for (let issue of posts.issues) {
-      issue.extensionId = id;
-      await sendIssueEmail(issue, config.email);
+      await sendIssueEmail({ ...issue, extensionId: id }, config.email);
     }
   }
 
