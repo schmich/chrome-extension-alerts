@@ -43,7 +43,7 @@ async function jsonpExtensionThread(extensionId, group) {
         sortby: 'date',
         startindex: '0',
         numresults: '25',
-        id: '0'
+        id: '0' // Defines the top-level response key.
       }
     ],
     internedKeys: [],
@@ -52,8 +52,15 @@ async function jsonpExtensionThread(extensionId, group) {
 
   Logger.info(`Fetch ${group} thread for ${extensionId}.`);
 
-  let postBody = querystring.stringify({ req: JSON.stringify(req) });
-  let resp = await axios.post('https://chrome.google.com/reviews/components', postBody);
+  let resp = await axios({
+    url: 'https://chrome.google.com/reviews/components',
+    method: 'post',
+    headers: {
+      'Content-Type': 'text/plain;charset=UTF-8',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
+    },
+    data: `req=${JSON.stringify(req)}`
+  });
 
   return resp.data;
 }
