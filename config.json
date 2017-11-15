@@ -1,0 +1,22 @@
+{
+  "extensions": ["chrome-extension-id"],
+  "email": {
+    "from": "You <username@example.com>",
+    "to": "you@example.com",
+    "host": "smtp.example.com",
+    "port": 465,
+    "secure": true,
+    "auth": {
+      "user": "username",
+      "pass": "p4ssw0rd"
+    },
+    "reviews": {
+      "subject": "Review: {{ '⭐ '.repeat(rating) }} – {{ author.name }}",
+      "body": "<p style='white-space: pre'>{{ comment }}</p><p><a :href=\"`https://chrome.google.com/webstore/detail/${extensionId}/reviews`\">Chrome Web Store</a></p>"
+    },
+    "issues": {
+      "subject": "{{ type[0].toUpperCase() + type.slice(1) }}: {{ title }} – {{ author.name }}",
+      "body": "<p>{{ comment }}</p><p><a :href=\"`https://chrome.google.com/webstore/detail/${extensionId}/support`\">Chrome Web Store</a></p>"
+    }
+  }
+}

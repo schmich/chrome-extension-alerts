@@ -1,0 +1,33 @@
+{
+  "name": "chrome-extension-alerts",
+  "version": "0.0.1",
+  "description": "Get email notifications for user feedback on your Chrome extension",
+  "main": "extension.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/schmich/chrome-extension-alerts.git"
+  },
+  "keywords": [
+    "chrome extension",
+    "chrome",
+    "extension",
+    "google chrome",
+    "chrome web store",
+    "web extension"
+  ],
+  "author": "Chris Schmich <schmch@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/schmich/chrome-extension-alerts/issues"
+  },
+  "homepage": "https://github.com/schmich/chrome-extension-alerts#readme",
+  "dependencies": {
+    "axios": "^0.17.1",
+    "nodemailer": "^4.4.0",
+    "vue": "^2.5.3",
+    "vue-server-renderer": "^2.5.3"
+  }
+}
