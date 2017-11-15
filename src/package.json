@@ -4,6 +4,7 @@
   "description": "Get email notifications for user feedback on your Chrome extension",
   "main": "scan.js",
   "scripts": {
+    "start": "node --harmony scan.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
