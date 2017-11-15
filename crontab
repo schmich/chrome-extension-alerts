@@ -1,0 +1,1 @@
+*/10 * * * * cd /app && PATH=$PATH:/usr/local/bin npm start -- --config /var/chrome-extension-alerts/config.json --frontier /var/chrome-extension-alerts/frontier.json >> /var/log/chrome-extension-alerts.log 2>&1
