@@ -3,8 +3,21 @@ const fs = require('fs');
 const axios = require('axios');
 const querystring = require('querystring');
 const nodemailer = require('nodemailer');
+const winston = require('winston');
+const { format } = require('logform');
 const Vue = require('vue');
 const VueRenderer = require('vue-server-renderer').createRenderer();
+
+let Logger = winston.createLogger({
+  level: 'debug',
+  format: format.combine(
+    format.colorize(),
+    format.timestamp(),
+    format.align(),
+    format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+  ),
+  transports: [new winston.transports.Console()]
+});
 
 async function all(...promises) {
   return await Promise.all(promises);
@@ -35,6 +48,8 @@ async function jsonpExtensionThread(extensionId, group) {
     internedKeys: [],
     internedValues: []
   };
+
+  Logger.info(`Fetch ${group} thread for ${extensionId}.`);
 
   let postBody = querystring.stringify({ req: JSON.stringify(req) });
   let resp = await axios.post('https://chrome.google.com/reviews/components', postBody);
@@ -191,14 +206,17 @@ async function sendEmail(config, templates, data) {
 }
 
 async function sendReviewEmail(review, config) {
+  Logger.info('Send review email.');
   await sendEmail(config, config.reviews, review);
 }
 
 async function sendIssueEmail(issue, config) {
+  Logger.info('Send issue email.');
   await sendEmail(config, config.issues, issue);
 }
 
-async function run() {
+async function scan() {
+  Logger.info('Load config and frontier.');
   let [config, frontier] = await all(loadConfig(), loadFrontier());
 
   let newPosts = await fetchAllNewPosts(config, frontier);
@@ -208,16 +226,27 @@ async function run() {
     let posts = newPosts[id];
     newFrontier[id] = posts.frontier;
 
+    Logger.info(`Found ${posts.reviews.length} new reviews.`);
     for (let review of posts.reviews) {
       await sendReviewEmail({ ...review, extensionId: id }, config.email);
     }
 
+    Logger.info(`Found ${posts.issues.length} new issues.`);
     for (let issue of posts.issues) {
       await sendIssueEmail({ ...issue, extensionId: id }, config.email);
     }
   }
 
+  Logger.info('Save frontier.');
   saveFrontier(newFrontier);
 }
 
-(async () => await run())();
+(async () => {
+  try {
+    Logger.info('Scan.');
+    await scan();
+  } catch (e) {
+    Logger.error(e);
+    throw e;
+  }
+})();

@@ -28,6 +28,7 @@
     "axios": "^0.17.1",
     "nodemailer": "^4.4.0",
     "vue": "^2.5.3",
-    "vue-server-renderer": "^2.5.3"
+    "vue-server-renderer": "^2.5.3",
+    "winston": "^3.0.0-rc1"
   }
 }
