@@ -20,7 +20,7 @@ Reviews and issues are checked every ten minutes.
 
 See [config.json](config.json).
 
-- `extensions`: Array of Chrome extension IDs to track.
+- `extensions`: Dictionary of Chrome extensions to track. Maps extension names to IDs.
 - `email`: Email configuration as defined by [Nodemailer](https://nodemailer.com/smtp/#examples).
 - `template`: Email templates. `reviews` and `issues` inherit default values from `default`.
 
@@ -33,7 +33,10 @@ Example data available for review templates:
 
 ```js
 {
-  extensionId: "lojgmehidjdhhbmpjfamhpkpodfcodef",
+  extension: {
+    id: "lojgmehidjdhhbmpjfamhpkpodfcodef",
+    name: "Marinara"
+  },
   author: {
     name: "Chris Schmich",
     url: "https://plus.google.com/+ChrisSchmich0",
@@ -49,7 +52,10 @@ Example data available for issue templates:
 
 ```js
 {
-  extensionId: "lojgmehidjdhhbmpjfamhpkpodfcodef",
+  extension: {
+    id: "lojgmehidjdhhbmpjfamhpkpodfcodef",
+    name: "Marinara"
+  },
   author: {
     name: "Chris Schmich",
     url: "https://plus.google.com/+ChrisSchmich0",

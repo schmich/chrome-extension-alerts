@@ -30,6 +30,15 @@ async function sleep(milliseconds) {
   });
 }
 
+function invert(obj) {
+  let inverted = {};
+  for (let key in obj) {
+    let value = obj[key];
+    inverted[value] = key;
+  }
+  return inverted;
+}
+
 async function jsonpExtensionThread(extensionId, group) {
   const req = {
     appId: 94,
@@ -176,10 +185,10 @@ async function fetchNewPosts(extensionId, frontier) {
   };
 }
 
-async function fetchAllNewPosts(config, frontiers) {
+async function fetchAllNewPosts(extensionIds, frontiers) {
   let all = {};
 
-  for (let id of config.extensions) {
+  for (let id of extensionIds) {
     let frontier = frontiers[id] || {};
     all[id] = await fetchNewPosts(id, frontier);
   }
@@ -225,11 +234,16 @@ async function sendIssueEmail(transport, issue, templates) {
 }
 
 async function scan(config, frontiers, frontierFile) {
-  let newPosts = await fetchAllNewPosts(config, frontiers);
+  let extensions = invert(config.extensions);
+  let newPosts = await fetchAllNewPosts(Object.keys(extensions), frontiers);
   let transport = nodemailer.createTransport(config.email);
 
   for (let id in newPosts) {
     let posts = newPosts[id];
+    let extension = {
+      id: id,
+      name: extensions[id]
+    };
 
     const hasFrontier = !!frontiers[id];
     if (!hasFrontier) {
@@ -240,7 +254,7 @@ async function scan(config, frontiers, frontierFile) {
     Logger.info(`Found ${posts.reviews.length} new reviews.`);
     for (let review of posts.reviews) {
       if (hasFrontier) {
-        await sendReviewEmail(transport, { ...review, extensionId: id }, config.templates);
+        await sendReviewEmail(transport, { ...review, extension }, config.templates);
       }
 
       frontiers[id].reviews = review.createdAt;
@@ -250,7 +264,7 @@ async function scan(config, frontiers, frontierFile) {
     Logger.info(`Found ${posts.issues.length} new issues.`);
     for (let issue of posts.issues) {
       if (hasFrontier) {
-        await sendIssueEmail(transport, { ...issue, extensionId: id }, config.templates);
+        await sendIssueEmail(transport, { ...issue, extension }, config.templates);
       }
 
       frontiers[id].issues = issue.createdAt;
