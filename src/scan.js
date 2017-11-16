@@ -71,6 +71,10 @@ async function jsonpExtensionThread(extensionId, group) {
     data: `req=${JSON.stringify(req)}`
   });
 
+  if (resp.status !== 200) {
+    throw new Error(`Unexpected HTTP response status: ${resp.status}.`);
+  }
+
   return resp.data;
 }
 
