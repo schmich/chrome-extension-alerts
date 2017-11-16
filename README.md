@@ -10,7 +10,6 @@ You can [choose a stable tag](https://hub.docker.com/r/schmich/chrome-extension-
 mkdir /srv/chrome-extension-alerts && cd /srv/chrome-extension-alerts
 curl -LO https://raw.githubusercontent.com/schmich/chrome-extension-alerts/master/config.json
 # Edit config.json with your configuration.
-
 docker run --name chrome-extension-alerts -d -v `pwd`:/var/chrome-extension-alerts --restart always schmich/chrome-extension-alerts:latest
 ```
 
@@ -70,7 +69,8 @@ Example data available for issue templates:
 
 Possible issue `type` values are `question` (Questions), `feature` (Suggestions), and `bug` (Problems).
 
-`createdAt` is number of seconds since the epoch and can be formatted with `new Date(createdAt * 1000)`.
+`createdAt` is when the item was created and is measured by the number of seconds since the epoch.
+It can be formatted with `new Date(createdAt * 1000)`.
 
 ## License
 
