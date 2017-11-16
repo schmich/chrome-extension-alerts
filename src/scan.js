@@ -75,21 +75,16 @@ async function jsonpExtensionThread(extensionId, group) {
 }
 
 async function fetchExtensionThread(extensionId, group) {
-  let jsonp = await jsonpExtensionThread(extensionId, group);
+  // Replace the JSONP method call with a simple load(...) call.
+  const jsonp = (await jsonpExtensionThread(extensionId, group))
+    .replace(/^.*?\(/, 'load(');
 
   const sandbox = {
     result: null,
-    window: {
-      google: {
-        annotations2: {
-          component: {
-            load: response => response
-          }
-        }
-      }
-    }
+    load: response => response
   };
 
+  // Evaluate the JSONP in a sandbox and extract the result.
   vm.runInNewContext(`result=${jsonp}`, sandbox);
   return sandbox.result;
 }
