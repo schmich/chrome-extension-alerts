@@ -39,7 +39,7 @@ function invert(obj) {
   return inverted;
 }
 
-async function jsonpExtensionThread(extensionId, group) {
+async function jsonpExtensionThreads(extensionId) {
   const req = {
     appId: 94,
     version: '150922',
@@ -48,18 +48,27 @@ async function jsonpExtensionThread(extensionId, group) {
       {
         type: 'CommentThread',
         url: `http://chrome.google.com/extensions/permalink?id=${extensionId}`,
-        groups: group,
+        groups: 'chrome_webstore',
         sortby: 'date',
         startindex: '0',
         numresults: '25',
-        id: '0' // Defines the top-level response key.
+        id: '0' // Top-level response key.
+      },
+      {
+        type: 'CommentThread',
+        url: `http://chrome.google.com/extensions/permalink?id=${extensionId}`,
+        groups: 'chrome_webstore_support',
+        sortby: 'date',
+        startindex: '0',
+        numresults: '25',
+        id: '1' // Top-level response key.
       }
     ],
     internedKeys: [],
     internedValues: []
   };
 
-  Logger.info(`Fetch ${group} thread for ${extensionId}.`);
+  Logger.info(`Fetch threads for ${extensionId}.`);
 
   let resp = await axios({
     url: 'https://chrome.google.com/reviews/components',
@@ -78,14 +87,13 @@ async function jsonpExtensionThread(extensionId, group) {
   return resp.data;
 }
 
-async function fetchExtensionThread(extensionId, group) {
+function loadJsonp(source) {
   // Replace the JSONP method call with a simple load(...) call.
-  const jsonp = (await jsonpExtensionThread(extensionId, group))
-    .replace(/^.*?\(/, 'load(');
+  const jsonp = source.replace(/^.*?\(/, 'load(');
 
   const sandbox = {
     result: null,
-    load: response => response
+    load: function () { return arguments; }
   };
 
   // Evaluate the JSONP in a sandbox and extract the result.
@@ -121,14 +129,14 @@ function issueFromAnnotation(annotation) {
   };
 }
 
-async function fetchIssues(extensionId) {
-  let issues = await fetchExtensionThread(extensionId, 'chrome_webstore_support');
-  return issues[0].results.annotations.map(issueFromAnnotation);
-}
+async function fetchExtensionThreads(extensionId) {
+  let jsonp = await jsonpExtensionThreads(extensionId);
+  let [threads] = loadJsonp(jsonp);
 
-async function fetchReviews(extensionId) {
-  let reviews = await fetchExtensionThread(extensionId, 'chrome_webstore')
-  return reviews[0].results.annotations.map(reviewFromAnnotation);
+  let reviews = threads[0].results.annotations.map(reviewFromAnnotation);
+  let issues = threads[1].results.annotations.map(issueFromAnnotation);
+
+  return { reviews, issues };
 }
 
 function readFile(file) {
@@ -165,7 +173,7 @@ async function saveJson(obj, file) {
 }
 
 async function fetchNewPosts(extensionId, frontier) {
-  let [reviews, issues] = await all(fetchReviews(extensionId), fetchIssues(extensionId));
+  let { reviews, issues } = await fetchExtensionThreads(extensionId);
 
   let reviewsFrontier = frontier.reviews || 0;
   let issuesFrontier = frontier.issues || 0;
