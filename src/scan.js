@@ -185,17 +185,6 @@ async function fetchNewPosts(extensionId, frontier) {
   };
 }
 
-async function fetchAllNewPosts(extensionIds, frontiers) {
-  let all = {};
-
-  for (let id of extensionIds) {
-    let frontier = frontiers[id] || {};
-    all[id] = await fetchNewPosts(id, frontier);
-  }
-
-  return all;
-}
-
 async function render(template, data) {
   const app = new Vue({
     template: `<div>${template}</div>`,
@@ -234,25 +223,27 @@ async function sendIssueEmail(transport, issue, templates) {
 }
 
 async function scan(config, frontiers, frontierFile) {
-  let extensions = invert(config.extensions);
-  let newPosts = await fetchAllNewPosts(Object.keys(extensions), frontiers);
-  let transport = nodemailer.createTransport(config.email);
+  const extensions = invert(config.extensions);
+  const transport = nodemailer.createTransport(config.email);
 
-  for (let id in newPosts) {
-    let posts = newPosts[id];
-    let extension = {
+  for (let id in extensions) {
+    const extension = {
       id: id,
       name: extensions[id]
     };
 
+    Logger.info(`Scan ${extension.name} (${id}).`);
+
     const hasFrontier = !!frontiers[id];
     if (!hasFrontier) {
-      Logger.info(`Skipping emails: first scan for ${id}.`);
+      Logger.info('Skipping emails: first scan for this extension.');
       frontiers[id] = { reviews: 0, issues: 0 };
     }
 
-    Logger.info(`Found ${posts.reviews.length} new reviews.`);
-    for (let review of posts.reviews) {
+    const { reviews, issues } = await fetchNewPosts(id, frontiers[id]);
+
+    Logger.info(`Found ${reviews.length} new reviews.`);
+    for (let review of reviews) {
       if (hasFrontier) {
         await sendReviewEmail(transport, { ...review, extension }, config.templates);
       }
@@ -261,8 +252,8 @@ async function scan(config, frontiers, frontierFile) {
       await saveJson(frontiers, frontierFile);
     }
 
-    Logger.info(`Found ${posts.issues.length} new issues.`);
-    for (let issue of posts.issues) {
+    Logger.info(`Found ${issues.length} new issues.`);
+    for (let issue of issues) {
       if (hasFrontier) {
         await sendIssueEmail(transport, { ...issue, extension }, config.templates);
       }
@@ -287,7 +278,7 @@ async function run(args) {
   Logger.info('Load config and frontier.');
   let [config, frontiers] = await all(loadJson(args.config), loadJson(args.frontier, {}));
 
-  Logger.info('Scan.');
+  Logger.info('Scan all extensions.');
   await scan(config, frontiers, args.frontier);
 }
 
